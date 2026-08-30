@@ -1,5 +1,5 @@
 #include "filef.h"
-#include <Windows.h>
+#include <climits>   // PATH_MAX (replaces Windows.h's _MAX_PATH)
 #include <fstream>
 #include <string>
 #include <memory>
@@ -39,9 +39,9 @@ bool wcheckSlash(std::wstring& str, bool first)
 
 std::string getWideStr(std::ifstream &file, bool f)
 {
-	auto buff = std::make_unique<char[]>(_MAX_PATH);
+	auto buff = std::make_unique<char[]>(PATH_MAX);
 	int strlen = 0;
-	for (int i = 0; i < _MAX_PATH; i++)
+	for (int i = 0; i < PATH_MAX; i++)
 	{
 		char temp[2];
 		file.read((char*)&temp, sizeof(temp));

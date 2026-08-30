@@ -14,8 +14,6 @@
 
 namespace fs = std::filesystem;   // was std::experimental::filesystem
 
-
-
 struct rcf_header {
 	char  header[32] = {};
 	int   version;
@@ -138,6 +136,19 @@ int main(int argc, char* argv[])
 				std::unique_ptr<char[]> name = std::make_unique<char[]>(len);
 				pFile.read(name.get(), len - 1);
 				std::string tmp(name.get(), len - 1);
+				if (i < 10) {
+					std::cout << "[DEBUG] raw name[" << i << "] len=" << len << " bytes: ";
+					for (unsigned char c : tmp) {
+						if (c == '\\' ) std::cout << "\\\\";
+						else if (c < 32 || c > 126) std::cout << "\\x" << std::hex << (int)c << std::dec;
+						else std::cout << c;
+					}
+					std::cout << std::endl;
+				}
+				// RCF stores Windows-style paths with backslashes. On Linux '\' is not
+				// a path separator, so it must be normalized to '/' or every extracted
+				// file ends up literally named "dir\subdir\file.ext" in one flat folder.
+				std::replace(tmp.begin(), tmp.end(), '\\', '/');
 				names.push_back(tmp);
 				pFile.seekg(sizeof(int), pFile.cur);
 			}
@@ -168,7 +179,7 @@ int main(int argc, char* argv[])
 				if (checkSlash(names[i]))
 					fs::create_directories(splitString(names[i], false));
 
-				
+
 				std::ofstream oFile(names[i], std::ofstream::binary);
 				oFile.write(dataBuff.get(), dataSize);
 				std::cout << "Processing: " << splitString(names[i], true) << std::endl;
@@ -302,4 +313,3 @@ int main(int argc, char* argv[])
 	}
 
 }
-

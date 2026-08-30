@@ -7,7 +7,12 @@
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <algorithm>   // std::sort  (GCC needs this explicitly; MSVC pulled it in transitively)
+#include <cstring>     // strcmp, strlen
+#include <cstdio>      // sprintf
 #include "filef.h"
+
+namespace fs = std::filesystem;   // was std::experimental::filesystem
 
 
 
@@ -142,10 +147,10 @@ int main(int argc, char* argv[])
 
 			if (!o_param.empty())
 			{
-				if (!std::experimental::filesystem::exists(o_param))
-					std::experimental::filesystem::create_directory(o_param);
+				if (!fs::exists(o_param))
+					fs::create_directory(o_param);
 
-				std::experimental::filesystem::current_path(o_param);
+				fs::current_path(o_param);
 			}
 
 
@@ -161,9 +166,9 @@ int main(int argc, char* argv[])
 				std::unique_ptr<char[]> dataBuff = std::make_unique<char[]>(dataSize);
 				pFile.read(dataBuff.get(), dataSize);
 				if (checkSlash(names[i]))
-					std::experimental::filesystem::create_directories(splitString(names[i], false));
+					fs::create_directories(splitString(names[i], false));
 
-
+				
 				std::ofstream oFile(names[i], std::ofstream::binary);
 				oFile.write(dataBuff.get(), dataSize);
 				std::cout << "Processing: " << splitString(names[i], true) << std::endl;
@@ -175,14 +180,14 @@ int main(int argc, char* argv[])
 	}
 	if (mode == MODE_CREATE)
 	{
-		std::experimental::filesystem::path folder(argv[argc - 1]);
-		if (!std::experimental::filesystem::exists(folder))
+		fs::path folder(argv[argc - 1]);
+		if (!fs::exists(folder))
 		{
 			std::cout << "ERROR: Could not open directory: " << argv[argc - 1] << "!" << std::endl;
 			return 1;
 		}
 		
-		if (std::experimental::filesystem::exists(folder))
+		if (fs::exists(folder))
 		{
 
 			std::vector<std::string> names;
@@ -190,9 +195,9 @@ int main(int argc, char* argv[])
 			std::vector<int> sizes;
 			std::vector<unsigned int> crc;
 
-			for (const auto & file : std::experimental::filesystem::recursive_directory_iterator(folder))
+			for (const auto & file : fs::recursive_directory_iterator(folder))
 			{
-				if (!std::experimental::filesystem::is_directory(file.path().string()))
+				if (!fs::is_directory(file.path().string()))
 				{
 					std::string tmp(file.path().relative_path().string().c_str() + folder.string().size() + 1, file.path().relative_path().string().size() - folder.string().size());
 					names.push_back(tmp);
@@ -231,7 +236,7 @@ int main(int argc, char* argv[])
 
 			// estimate possible names size
 			int result = (sizeof(int) * 5) * names.size();
-			for (int i = 0; i < names.size(); i++)
+			for (size_t i = 0; i < names.size(); i++)
 				result += names[i].length() - 1;
 
 			// add 2 unk bytes
@@ -245,7 +250,7 @@ int main(int argc, char* argv[])
 
 
 			int baseOffset = calcOffsetFromPad(sizeof(rcf_header) + rcf.data_size, 2048) + calcOffsetFromPad(rcf.name_size,2048);
-			for (int i = 0; i < names.size(); i++)
+			for (size_t i = 0; i < names.size(); i++)
 			{
 				rcf_entry ent;
 				ent.offset = baseOffset;
@@ -261,7 +266,7 @@ int main(int argc, char* argv[])
 			int unkValues[2] = { 2048, 0 };
 			oFile.write((char*)&unkValues, sizeof(int) * 2);
 
-			for (int i = 0; i < names.size(); i++)
+			for (size_t i = 0; i < names.size(); i++)
 			{ 
 				int stuff[3] = {0,2048, 0 };
 				oFile.write((char*)&stuff, sizeof(int) * 3);
@@ -276,7 +281,7 @@ int main(int argc, char* argv[])
 			oFile.write(newpad.get(),calc);
 
 
-			for (int i = 0; i < names.size(); i++)
+			for (size_t i = 0; i < names.size(); i++)
 			{
 				std::ifstream pFile(paths[i], std::ifstream::binary);
 				if (!pFile)
